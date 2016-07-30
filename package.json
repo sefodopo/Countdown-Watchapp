@@ -1,0 +1,26 @@
+{
+  "name": "Countdown",
+  "author": "Sefodopo",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Countdown",
+    "uuid": "cedd426f-f98b-4bce-94e1-4a4f38668378",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
