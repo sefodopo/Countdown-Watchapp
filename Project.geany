@@ -28,10 +28,10 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=1
-FILE_NAME_0=251;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fmain.c;0;4
-FILE_NAME_1=59;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.h;0;4
-FILE_NAME_2=573;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.c;0;4
+current_page=0
+FILE_NAME_0=346;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fmain.c;0;4
+FILE_NAME_1=242;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.h;0;4
+FILE_NAME_2=639;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.c;0;4
 
 [VTE]
 last_dir=/home/joshua
