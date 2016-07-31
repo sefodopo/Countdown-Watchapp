@@ -21,14 +21,17 @@ indent_mode=2
 name=Project
 base_path=/home/joshua/pebble-dev/Countdown
 description=
+file_patterns=
 
 [long line marker]
 long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=0
-FILE_NAME_0=435;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fmain.c;0;4
+current_page=1
+FILE_NAME_0=251;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fmain.c;0;4
+FILE_NAME_1=59;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.h;0;4
+FILE_NAME_2=573;C;0;EUTF-8;1;1;0;%2Fhome%2Fjoshua%2Fpebble-dev%2FCountdown%2Fsrc%2Fevent.c;0;4
 
 [VTE]
 last_dir=/home/joshua
@@ -40,3 +43,27 @@ ignored_dirs_patterns=.*;CVS;
 ignored_file_patterns=*.o;*.obj;*.a;*.lib;*.so;*.dll;*.lo;*.la;*.class;*.jar;*.pyc;*.mo;*.gmo;
 generate_tag_prefs=0
 external_dirs=/home/joshua/.pebble-sdk/SDKs/current/sdk-core/pebble/basalt/include;
+
+[build-menu]
+NF_00_LB=
+NF_00_CM=
+NF_00_WD=
+NF_01_LB=Phone
+NF_01_CM=/home/joshua/pebble-dev/pebble-sdk-4.3-linux32/bin/pebble install --phone 
+NF_01_WD=/home/joshua/pebble-dev/Countdown
+NF_02_LB=
+NF_02_CM=
+NF_02_WD=
+EX_00_LB=Emulate
+EX_00_CM=/home/joshua/pebble-dev/pebble-sdk-4.3-linux32/bin/pebble install --emulator basalt
+EX_00_WD=/home/joshua/pebble-dev/Countdown/
+CFT_00_LB=Build
+CFT_00_CM=/home/joshua/pebble-dev/pebble-sdk-4.3-linux32/bin/pebble build
+CFT_00_WD=/home/joshua/pebble-dev/Countdown/
+CFT_01_LB=
+CFT_01_CM=
+CFT_01_WD=
+CFT_02_LB=
+CFT_02_CM=
+CFT_02_WD=
+filetypes=C;
