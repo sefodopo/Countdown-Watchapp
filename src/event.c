@@ -57,7 +57,7 @@ char** events_getCurrent(Events* events, struct tm* tick_time, char** out, Unit 
 	seconds -= hours * SECONDS_PER_HOUR;
 	minutes = seconds / SECONDS_PER_MINUTE;
 	seconds -= minutes * SECONDS_PER_MINUTE;
-	out[0] = current->title;
+	strncpy(out[0], current->title, TITLE_SIZE * sizeof(char));
 	switch (units) {
 		case MINUTE:
 			snprintf(out[1], TIME_SIZE * sizeof(char), "%u:%u", (unsigned int)hours, (unsigned int)minutes);

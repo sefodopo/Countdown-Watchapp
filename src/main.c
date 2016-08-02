@@ -25,8 +25,6 @@ static void main_window_load(Window *window) {
 	first_event_string = malloc(2 * sizeof(char*));
 	first_event_string[0] = malloc(TITLE_SIZE * sizeof(char));
 	first_event_string[1] = malloc(TIME_SIZE * sizeof(char));
-	snprintf(first_event_string[0], TITLE_SIZE * sizeof(char), "Title");
-	snprintf(first_event_string[1], TIME_SIZE * sizeof(char), "00:00");
 	
 	Layer* window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
@@ -35,7 +33,7 @@ static void main_window_load(Window *window) {
 	title_layer = text_layer_create(GRect(0, 0, bounds.size.w, 30));
 	text_layer_set_background_color(title_layer, GColorClear);
 	text_layer_set_text_color(title_layer, GColorWhite);
-	text_layer_set_text(title_layer, first_event_string[0]);
+	text_layer_set_text(title_layer, "Title");
 	text_layer_set_font(title_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
 	text_layer_set_text_alignment(title_layer, GTextAlignmentCenter);
 	layer_add_child(window_layer, text_layer_get_layer(title_layer));
@@ -43,7 +41,7 @@ static void main_window_load(Window *window) {
 	time_layer = text_layer_create (GRect(0, 30, bounds.size.w, 30));
 	text_layer_set_background_color(time_layer, GColorClear);
 	text_layer_set_text_color(time_layer, GColorWhite);
-	text_layer_set_text(time_layer, first_event_string[1]);
+	text_layer_set_text(time_layer, "Time");
 	text_layer_set_font(time_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
 	text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
 	layer_add_child(window_layer, text_layer_get_layer(time_layer));
@@ -51,12 +49,13 @@ static void main_window_load(Window *window) {
 }
 
 static void main_window_unload(Window *window) {
+	tick_timer_service_unsubscribe();
+	text_layer_destroy(title_layer);
+	text_layer_destroy(time_layer);
 	free(first_event_string[0]);
 	free(first_event_string[1]);
 	free(first_event_string);
 	events_destroy(first_event);
-	text_layer_destroy(title_layer);
-	text_layer_destroy(time_layer);
 }
 
 static void init() {
