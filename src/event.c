@@ -1,7 +1,7 @@
 #include <pebble.h>
 #include "event.h"
 
-event_Event* event_createEvent(const char* title, time_t seconds) {
+event_Event* event_create(const char* title, time_t seconds) {
 	event_Event* event = (event_Event*)malloc(sizeof(event_Event));
 	event->title = (char*)malloc(strlen(title) * sizeof(char));
 	strcpy(event->title, title);
@@ -13,7 +13,7 @@ int32_t event_getTimeLeft(event_Event* event, struct tm* tick_time) {
 	return event->seconds - mktime(tick_time);
 }
 
-void event_destroyEvent(event_Event* event) {
+void event_destroy(event_Event* event) {
 	free(event->title);
 	free(event);
 }
@@ -28,7 +28,7 @@ Events* events_create(uint8_t size) {
 
 void events_destroy(Events* events) {
 	for (int i = 0; i < events->size; i++) {
-		event_destroyEvent(events->events[i]);
+		event_destroy(events->events[i]);
 	}
 	free(events->events);
 	free(events);
@@ -47,8 +47,11 @@ char** events_getCurrent(Events* events, struct tm* tick_time, char** out, Unit 
 	}
 	events->index = i;
 	if (current == NULL) {
-		snprintf(out[0], TITLE_SIZE * sizeof(char), " ");
-		strftime(out[1], TIME_SIZE * sizeof(char), "%H:%M", tick_time);
+		snprintf(out[0], TITLE_SIZE * sizeof(char), "Title");
+		if (clock_is_24h_style())
+			strftime(out[1], TIME_SIZE * sizeof(char), "%H:%M", tick_time);
+		else
+			strftime(out[1], TIME_SIZE * sizeof(char), "%I:%M %P", tick_time);
 		return out;
 	}
 	uint16_t hours;

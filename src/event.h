@@ -21,11 +21,11 @@ typedef struct {
 	event_Event** events;
 } Events;
 
-event_Event* event_createEvent(const char* title, time_t seconds);
+event_Event* event_create(const char* title, time_t seconds);
 
 int32_t event_getTimeLeft(event_Event* event, struct tm* tick_time);
 
-void event_destroyEvent(event_Event* event);
+void event_destroy(event_Event* event);
 
 Events* events_create(uint8_t size);
 

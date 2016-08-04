@@ -20,7 +20,23 @@
     "messageKeys": [
     ],
     "resources": {
-      "media": []
+      "media": [
+		{
+			"type": "font",
+			"name": "SANS_15",
+			"file": "LiberationSans-Regular.ttf"
+		},
+		{
+			"type": "font",
+			"name": "SANS_20",
+			"file": "LiberationSans-Regular.ttf"
+		},
+		{
+			"type": "font",
+			"name": "SANS_30",
+			"file": "LiberationSans-Bold.ttf"
+		}
+      ]
     }
   }
 }

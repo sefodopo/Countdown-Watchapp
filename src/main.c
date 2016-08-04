@@ -1,64 +1,160 @@
 #include <pebble.h>
 #include "event.h"
 
+#define SMALL_TEXT_SIZE 20
+#define MEDIUM_TEXT_SIZE 27
+#define LARGE_TEXT_SIZE 38
+#define NULL_NUMBER 99999
+#define MAX_TEXT_LENGTH 20
+
+#define PERSIST_MAIN_DATA 0
+
 static Window* s_main_window;
-static TextLayer* title_layer;
-static TextLayer* time_layer;
+static TextLayer** text_layers;
 static Unit current_unit;
-static Events* first_event;
-static char** first_event_string;
+static GFont f_small;
+static GFont f_medium;
+static GFont f_large;
+static char** text;
+enum FontSize {
+	SMALL,
+	MEDIUM,
+	LARGE
+};
+struct main_data {
+	uint layers_enabled;
+	uint date_layer;
+	uint first_event_title;
+	uint first_event_time;
+	uint second_event_title;
+	uint second_event_time;
+	uint third_event_title;
+	uint third_event_time;
+	enum FontSize first_layer_font_size;
+	enum FontSize second_layer_font_size;
+	enum FontSize third_layer_font_size;
+	enum FontSize fourth_layer_font_size;
+	enum FontSize fifth_layer_font_size;
+	enum FontSize sixth_layer_font_size;
+	enum FontSize seventh_layer_font_size;
+	bool first_event_enabled;
+	bool second_event_enabled;
+	bool third_event_enabled;
+};
+
+static struct main_data m_data;
+
+GFont get_font_from_size(enum FontSize size) {
+	switch (size) {
+		case SMALL:
+			return f_small;
+		case MEDIUM:
+			return f_medium;
+		case LARGE:
+			return f_large;
+		default:
+			return f_small;
+	}
+}
 
 void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
-	events_getCurrent(first_event, tick_time, first_event_string, current_unit);
-	text_layer_set_text(title_layer, first_event_string[0]);
-	text_layer_set_text(time_layer, first_event_string[1]);
+}
+
+static enum FontSize get_font_size(int i) {
+	switch(i) {
+		case 7:
+			return m_data.seventh_layer_font_size;
+		case 6:
+			return m_data.sixth_layer_font_size;
+		case 5:
+			return m_data.fifth_layer_font_size;
+		case 4:
+			return m_data.fourth_layer_font_size;
+		case 3:
+			return m_data.third_layer_font_size;
+		case 2:
+			return m_data.second_layer_font_size;
+		case 1:
+			return m_data.first_layer_font_size;
+		default:
+			return SMALL;
+	}
+}
+
+static int get_height(int i) {
+	switch (get_font_size(i)) {
+		case SMALL:
+			return SMALL_TEXT_SIZE;
+		case MEDIUM:
+			return MEDIUM_TEXT_SIZE;
+		case LARGE:
+			return LARGE_TEXT_SIZE;
+		default:
+			return SMALL_TEXT_SIZE;
+	}
 }
 
 static void main_window_load(Window *window) {
-	current_unit = MINUTE;
-	first_event = events_create(1);
-	time_t tempt = time(NULL);
-	struct tm* temp = localtime(&tempt);
-	temp->tm_min = 50;
-	first_event->events[0] = event_createEvent("Bedtime", mktime(temp));
-	
-	first_event_string = malloc(2 * sizeof(char*));
-	first_event_string[0] = malloc(TITLE_SIZE * sizeof(char));
-	first_event_string[1] = malloc(TIME_SIZE * sizeof(char));
-	
-	Layer* window_layer = window_get_root_layer(window);
-	GRect bounds = layer_get_bounds(window_layer);
 	window_set_background_color(window, GColorBlack);
-	
-	title_layer = text_layer_create(GRect(0, 0, bounds.size.w, 30));
-	text_layer_set_background_color(title_layer, GColorClear);
-	text_layer_set_text_color(title_layer, GColorWhite);
-	text_layer_set_text(title_layer, "Title");
-	text_layer_set_font(title_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-	text_layer_set_text_alignment(title_layer, GTextAlignmentCenter);
-	layer_add_child(window_layer, text_layer_get_layer(title_layer));
-	
-	time_layer = text_layer_create (GRect(0, 30, bounds.size.w, 30));
-	text_layer_set_background_color(time_layer, GColorClear);
-	text_layer_set_text_color(time_layer, GColorWhite);
-	text_layer_set_text(time_layer, "Time");
-	text_layer_set_font(time_layer, fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK));
-	text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
-	layer_add_child(window_layer, text_layer_get_layer(time_layer));
+	current_unit = MINUTE;
+	Layer* window_layer = window_get_root_layer(window);
+	int window_height = layer_get_bounds(window_layer).size.h;
+	int window_width = layer_get_bounds(window_layer).size.w;
+	int layers_height = 0;
+	int padding;
+	if (persist_exists(PERSIST_MAIN_DATA)) {
+		persist_read_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
+	} else {
+		m_data.layers_enabled = 2;
+		m_data.date_layer = 0;
+		m_data.first_event_title = NULL_NUMBER;
+		m_data.first_event_time = 1;
+		m_data.first_event_enabled = true;
+		m_data.second_event_enabled = false;
+		m_data.third_event_enabled = false;
+		m_data.first_layer_font_size = MEDIUM;
+		m_data.second_layer_font_size = MEDIUM;
+		m_data.third_layer_font_size = LARGE;
+	}
+	// alocate memory for all pointers
+	text = malloc (m_data.layers_enabled * sizeof(char*));
+	text_layers = malloc (m_data.layers_enabled * sizeof(TextLayer*));
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		layers_height += get_height(i);
+	}
+	padding = (window_height - layers_height) / (m_data.layers_enabled + 1);
+	int ii = padding;
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text[i] = malloc(MAX_TEXT_LENGTH * sizeof(char));
+		text[i][0] = '\0';
+		text_layers[i] = text_layer_create(GRect(0, ii, window_width, get_height(i)));
+		text_layer_set_background_color(text_layers[i], GColorClear);
+		text_layer_set_text_color(text_layers[i], GColorWhite);
+		text_layer_set_text(text_layers[i], text[i]);
+		text_layer_set_text_alignment(text_layers[i], GTextAlignmentCenter);
+		text_layer_set_font(text_layers[i], get_font_from_size(get_font_size(i)));
+		layer_add_child(window_layer, text_layer_get_layer(text_layers[i]));
+		ii += get_height(i);
+		ii += padding;
+	}
+	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
 
 static void main_window_unload(Window *window) {
 	tick_timer_service_unsubscribe();
-	text_layer_destroy(title_layer);
-	text_layer_destroy(time_layer);
-	free(first_event_string[0]);
-	free(first_event_string[1]);
-	free(first_event_string);
-	events_destroy(first_event);
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text_layer_destroy(text_layers[i]);
+		free(text[i]);
+	}
+	free(text_layers);
+	free(text);
 }
 
 static void init() {
+	f_small = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_SANS_15));
+	f_medium = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_SANS_20));
+	f_large = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_SANS_30));
 	s_main_window = window_create();
 	window_set_window_handlers(s_main_window, (WindowHandlers) {
 		.load = main_window_load,
@@ -69,6 +165,9 @@ static void init() {
 
 static void deinit() {
 	window_destroy(s_main_window);
+	fonts_unload_custom_font(f_small);
+	fonts_unload_custom_font(f_medium);
+	fonts_unload_custom_font(f_large);
 }
 
 int main(void) {
