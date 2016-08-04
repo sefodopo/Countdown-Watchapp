@@ -2,10 +2,9 @@
 #include "event.h"
 
 #define SMALL_TEXT_SIZE 20
-#define MEDIUM_TEXT_SIZE 27
+#define MEDIUM_TEXT_SIZE 24
 #define LARGE_TEXT_SIZE 38
-#define NULL_NUMBER 99999
-#define MAX_TEXT_LENGTH 20
+#define MAX_PADDING_SIZE 10
 
 #define PERSIST_MAIN_DATA 0
 
@@ -15,32 +14,8 @@ static Unit current_unit;
 static GFont f_small;
 static GFont f_medium;
 static GFont f_large;
+static Events** events;
 static char** text;
-enum FontSize {
-	SMALL,
-	MEDIUM,
-	LARGE
-};
-struct main_data {
-	uint layers_enabled;
-	uint date_layer;
-	uint first_event_title;
-	uint first_event_time;
-	uint second_event_title;
-	uint second_event_time;
-	uint third_event_title;
-	uint third_event_time;
-	enum FontSize first_layer_font_size;
-	enum FontSize second_layer_font_size;
-	enum FontSize third_layer_font_size;
-	enum FontSize fourth_layer_font_size;
-	enum FontSize fifth_layer_font_size;
-	enum FontSize sixth_layer_font_size;
-	enum FontSize seventh_layer_font_size;
-	bool first_event_enabled;
-	bool second_event_enabled;
-	bool third_event_enabled;
-};
 
 static struct main_data m_data;
 
@@ -58,23 +33,27 @@ GFont get_font_from_size(enum FontSize size) {
 }
 
 void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
+	events_getCurrent(events, &m_data, tick_time, text, current_unit);
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text_layer_set_text(text_layers[i], text[i]);
+	}
 }
 
 static enum FontSize get_font_size(int i) {
 	switch(i) {
-		case 7:
-			return m_data.seventh_layer_font_size;
 		case 6:
-			return m_data.sixth_layer_font_size;
+			return m_data.seventh_layer_font_size;
 		case 5:
-			return m_data.fifth_layer_font_size;
+			return m_data.sixth_layer_font_size;
 		case 4:
-			return m_data.fourth_layer_font_size;
+			return m_data.fifth_layer_font_size;
 		case 3:
-			return m_data.third_layer_font_size;
+			return m_data.fourth_layer_font_size;
 		case 2:
-			return m_data.second_layer_font_size;
+			return m_data.third_layer_font_size;
 		case 1:
+			return m_data.second_layer_font_size;
+		case 0:
 			return m_data.first_layer_font_size;
 		default:
 			return SMALL;
@@ -107,14 +86,11 @@ static void main_window_load(Window *window) {
 	} else {
 		m_data.layers_enabled = 2;
 		m_data.date_layer = 0;
+		m_data.events_enabled = 1;
 		m_data.first_event_title = NULL_NUMBER;
 		m_data.first_event_time = 1;
-		m_data.first_event_enabled = true;
-		m_data.second_event_enabled = false;
-		m_data.third_event_enabled = false;
 		m_data.first_layer_font_size = MEDIUM;
-		m_data.second_layer_font_size = MEDIUM;
-		m_data.third_layer_font_size = LARGE;
+		m_data.second_layer_font_size = LARGE;
 	}
 	// alocate memory for all pointers
 	text = malloc (m_data.layers_enabled * sizeof(char*));
@@ -124,6 +100,11 @@ static void main_window_load(Window *window) {
 	}
 	padding = (window_height - layers_height) / (m_data.layers_enabled + 1);
 	int ii = padding;
+	if (padding > MAX_PADDING_SIZE) {
+		layers_height += MAX_PADDING_SIZE * (m_data.layers_enabled - 1);
+		ii = (window_height - layers_height) / 2;
+		padding = MAX_PADDING_SIZE;
+	}
 	for (uint i = 0; i < m_data.layers_enabled; i++) {
 		text[i] = malloc(MAX_TEXT_LENGTH * sizeof(char));
 		text[i][0] = '\0';
@@ -137,6 +118,10 @@ static void main_window_load(Window *window) {
 		ii += get_height(i);
 		ii += padding;
 	}
+	events = malloc(m_data.events_enabled * sizeof(Events*));
+	for (uint i = 0; i < m_data.events_enabled; i++) {
+		events[i] = events_create(0);
+	}
 	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
@@ -149,6 +134,10 @@ static void main_window_unload(Window *window) {
 	}
 	free(text_layers);
 	free(text);
+	for (uint i = 0; i < m_data.events_enabled; i++) {
+		events_destroy(events[i]);
+	}
+	free(events);
 }
 
 static void init() {
