@@ -7,6 +7,10 @@
 #define MAX_PADDING_SIZE 10
 
 #define PERSIST_MAIN_DATA 0
+#define PERSIST_EVENT_DATA 1
+
+#define INBOX_SIZE 64
+#define OUTBOX_SIZE 256
 
 static Window* s_main_window;
 static TextLayer** text_layers;
@@ -19,6 +23,31 @@ static char** text;
 
 static struct main_data m_data;
 
+void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
+	events_getCurrent(events, &m_data, tick_time, text, current_unit);
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text_layer_set_text(text_layers[i], text[i]);
+	}
+}
+
+static void inbox_received_callback(DictionaryIterator *iter, void *context) {
+	Tuple *dataTuple = dict_find(iter, MESSAGE_KEY_Data);
+	if (dataTuple) {
+		memcpy(&m_data, dataTuple->value->data, sizeof(struct main_data));
+		persist_write_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
+	}
+	dataTuple = dict_find(iter, MESSAGE_KEY_Events);
+	if (dataTuple) {
+		memcpy(&events, dataTuple->value->data, 3 * sizeof(Events*));
+		persist_write_data(PERSIST_EVENT_DATA, &events, sizeof(Events**));
+	}
+	time_t currentTime;
+	struct tm* ticker;
+	time(&currentTime);
+	ticker = localtime(&currentTime);
+	tick_handler(ticker, MINUTE);
+}
+
 GFont get_font_from_size(enum FontSize size) {
 	switch (size) {
 		case SMALL:
@@ -29,13 +58,6 @@ GFont get_font_from_size(enum FontSize size) {
 			return f_large;
 		default:
 			return f_small;
-	}
-}
-
-void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
-	events_getCurrent(events, &m_data, tick_time, text, current_unit);
-	for (uint i = 0; i < m_data.layers_enabled; i++) {
-		text_layer_set_text(text_layers[i], text[i]);
 	}
 }
 
@@ -118,12 +140,18 @@ static void main_window_load(Window *window) {
 		ii += get_height(i);
 		ii += padding;
 	}
-	events = malloc(m_data.events_enabled * sizeof(Events*));
-	for (uint i = 0; i < m_data.events_enabled; i++) {
-		events[i] = events_create(0);
+	events = malloc(3 * sizeof(Events*));
+	if (persist_exists(PERSIST_EVENT_DATA)) {
+		persist_read_data(PERSIST_EVENT_DATA, &events, sizeof(Events**));
+	} else {
+		for (uint i = 0; i < m_data.events_enabled; i++) {
+			events[i] = events_create(0);
+		}
 	}
 	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+	app_message_open(INBOX_SIZE, OUTBOX_SIZE);
+	app_message_register_inbox_received(inbox_received_callback);
 }
 
 static void main_window_unload(Window *window) {

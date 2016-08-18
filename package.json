@@ -18,6 +18,8 @@
       "watchface": true
     },
     "messageKeys": [
+		"Data",
+		"Events"
     ],
     "resources": {
       "media": [
