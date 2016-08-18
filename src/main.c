@@ -8,6 +8,24 @@
 
 #define PERSIST_MAIN_DATA 0
 
+#define AppKeyLayersEnabled 0
+#define AppKeyDateLayer 1
+#define AppKeyFirstEventTitle 2
+#define AppKeyFirstEventTime 3
+#define AppKeySecondEventTitle 4
+#define AppKeySecondEventTime 5
+#define AppKeyThirdEventTitle 6
+#define AppKeyThirdEventTime 7
+#define AppKeyEventsEnabled 8
+#define AppKeyStartFontSize 9
+#define AppKeyFirstEventCount 16
+#define AppKeySecondEventCount 17
+#define AppKeyThirdEventCount 18
+#define AppKeyStartFirstEvents 100
+#define AppKeyStartSecondEvents 140
+#define AppKeyStartThirdEvents 160
+
+
 static Window* s_main_window;
 static TextLayer** text_layers;
 static Unit current_unit;
