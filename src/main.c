@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "main.h"
 #include "event.h"
 
 #define SMALL_TEXT_SIZE 20
@@ -7,9 +8,14 @@
 #define MAX_PADDING_SIZE 10
 
 #define PERSIST_MAIN_DATA 0
-#define PERSIST_EVENT_DATA 1
+#define PERSIST_FIRST_EVENT_COUNT 1
+#define PERSIST_SECOND_EVENT_COUNT 2
+#define PERSIST_THIRD_EVENT_COUNT 3
+#define PERSIST_FIRST_EVENT_DATA 100
+#define PERSIST_SECOND_EVENT_DATA 140
+#define PERSIST_THIRD_EVENT_DATA 160
 
-#define INBOX_SIZE 64
+#define INBOX_SIZE 100
 #define OUTBOX_SIZE 256
 
 #define AppKeyLayersEnabled 0
@@ -42,23 +48,202 @@ static char** text;
 static struct main_data m_data;
 
 void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
-	events_getCurrent(events, &m_data, tick_time, text, current_unit);
+	if (events_getCurrent(events, &m_data, tick_time, text, current_unit)) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+		switch (current_unit) {
+			case MINUTE:
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+				current_unit = SECOND;
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+				tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+				break;
+			case SECOND:
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+				current_unit = MINUTE;
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+				tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+				break;
+		}
+	}
 	for (uint i = 0; i < m_data.layers_enabled; i++) {
 		text_layer_set_text(text_layers[i], text[i]);
 	}
 }
 
+static bool check_uint_changed(DictionaryIterator *iter, uint *update, int appKey) {
+	Tuple *tuple = dict_find(iter, appKey);
+	if (tuple) {
+		*update = tuple->value->uint8;
+		return true;
+	}
+	return false;
+}
+
+static void check_changed_font_size(DictionaryIterator *iter, int offset, enum FontSize *size){
+	Tuple *tuple = dict_find(iter, AppKeyStartFontSize + offset);
+	if (tuple) {
+		switch (tuple->value->uint8) {
+			case 0:
+				*size = SMALL;
+				break;
+			case 1:
+				*size = MEDIUM;
+				break;
+			case 2:
+				*size = LARGE;
+				break;
+			default:
+				*size = SMALL;
+		}
+	}
+}
+
+static void check_all_changed_font_size(DictionaryIterator *iter, int temp) {
+	// check for changed FontSizes
+	switch (temp) {
+		case 7:
+			check_changed_font_size(iter, 6, &m_data.seventh_layer_font_size);
+		case 6:
+			check_changed_font_size(iter, 5, &m_data.sixth_layer_font_size);
+		case 5:
+			check_changed_font_size(iter, 4, &m_data.fifth_layer_font_size);
+		case 4:
+			check_changed_font_size(iter, 3, &m_data.fourth_layer_font_size);
+		case 3:
+			check_changed_font_size(iter, 2, &m_data.third_layer_font_size);
+		case 2:
+			check_changed_font_size(iter, 1, &m_data.second_layer_font_size);
+		case 1:
+			check_changed_font_size(iter, 0, &m_data.first_layer_font_size);
+	}
+}
+
+static void load_events(DictionaryIterator *iter, int int1, uint count, int appKey) {
+	events_destroy(events[int1]);
+	events[int1] = events_create(count);
+	char *title = NULL;
+	time_t seconds = 0;
+	int temp = 0;
+	for (uint i = 0; i < count; i++) {
+		Tuple *tuple = dict_find(iter, appKey + temp);
+		if (tuple) {
+			title = tuple->value->cstring;
+		}
+		temp++;
+		tuple = dict_find(iter, appKey + temp);
+		if (tuple) {
+			seconds = tuple->value->uint32;
+		}
+		temp++;
+		events[int1]->events[i] = event_create(title, seconds);
+	}
+}
+
+static void write_persist(uint key, uint int1, uint countKey) {
+	uint temp = 0;
+	uint count = 0;
+	for (uint i = events[int1]->index; i < events[int1]->size; i++) {
+		persist_write_string(key + temp, events[int1]->events[i]->title);
+		temp++;
+		persist_write_int(key + temp, events[int1]->events[i]->seconds);
+		temp++;
+		count++;
+	}
+	persist_write_int(countKey, count);
+}
+
+static void read_persist(uint key, uint int1) {
+	uint temp = 0;
+	for (uint i = 0; i < events[int1]->size; i++) {
+		char string[MAX_TEXT_LENGTH];
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, string, sizeof(string)));
+		temp++;
+		events[int1]->events[i] = event_create(string, persist_read_int(key + temp));
+		temp++;
+	}
+}
+
 static void inbox_received_callback(DictionaryIterator *iter, void *context) {
-	Tuple *dataTuple = dict_find(iter, MESSAGE_KEY_Data);
-	if (dataTuple) {
-		memcpy(&m_data, dataTuple->value->data, sizeof(struct main_data));
-		persist_write_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
+	// check if layer count changed
+	Tuple *tuple = dict_find(iter, AppKeyLayersEnabled);
+	if (tuple) {
+		uint temp = tuple->value->uint8;
+		if (temp > m_data.layers_enabled) {
+			check_all_changed_font_size(iter, temp);
+			destroy_text_layers();
+			text = realloc(text, temp * sizeof(char*));
+			for (uint i = m_data.layers_enabled; i < temp; i++) {
+				text[i] = malloc(MAX_TEXT_LENGTH * sizeof(char));
+				text[i][0] = '\0';
+			}
+			text_layers = realloc(text_layers, temp * sizeof(TextLayer*));
+			m_data.layers_enabled = temp;
+			create_text_layers();
+		}
+		else if (temp < m_data.layers_enabled) {
+			check_all_changed_font_size(iter, temp);
+			destroy_text_layers();
+			for (uint i = temp; i < m_data.layers_enabled; i++) {
+				free(text[i]);
+			}
+			text = realloc(text, temp * sizeof(char*));
+			text_layers = realloc(text_layers, temp * sizeof(TextLayer*));
+			m_data.layers_enabled = temp;
+			create_text_layers();
+		}
+		else {
+			check_all_changed_font_size(iter, temp);
+			destroy_text_layers();
+			create_text_layers();
+		}
 	}
-	dataTuple = dict_find(iter, MESSAGE_KEY_Events);
-	if (dataTuple) {
-		memcpy(&events, dataTuple->value->data, 3 * sizeof(Events*));
-		persist_write_data(PERSIST_EVENT_DATA, &events, sizeof(Events**));
+	check_uint_changed(iter, &m_data.date_layer, AppKeyDateLayer);
+	uint events_before = m_data.events_enabled;
+	check_uint_changed(iter, &m_data.events_enabled, AppKeyEventsEnabled);
+	if (events_before < m_data.events_enabled) {
+		realloc(events, m_data.events_enabled * sizeof(Events*));
+		for (uint i = events_before; i < m_data.events_enabled; i++) {
+			events[i] = events_create(0);
+		}
+	} else if (events_before > m_data.events_enabled) {
+		for (uint i = m_data.events_enabled; i < events_before; i++) {
+			events_destroy(events[i]);
+		}
+		realloc(events, m_data.events_enabled * sizeof(Events*));
 	}
+	uint count;
+	switch (m_data.events_enabled) {
+		case 3:
+			check_uint_changed(iter, &m_data.third_event_title, AppKeyThirdEventTitle);
+			check_uint_changed(iter, &m_data.third_event_time, AppKeyThirdEventTime);
+			if (check_uint_changed(iter, &count, AppKeyThirdEventCount)) {
+				load_events(iter, 2, count, AppKeyStartThirdEvents);
+			}
+		case 2:
+			check_uint_changed(iter, &m_data.second_event_title, AppKeySecondEventTitle);
+			check_uint_changed(iter, &m_data.second_event_time, AppKeySecondEventTime);
+			if (check_uint_changed(iter, &count, AppKeySecondEventCount)) {
+				load_events(iter, 1, count, AppKeyStartSecondEvents);
+			}
+		case 1:
+			check_uint_changed(iter, &m_data.first_event_title, AppKeyFirstEventTitle);
+			check_uint_changed(iter, &m_data.first_event_time, AppKeyFirstEventTime);
+			if (check_uint_changed(iter, &count, AppKeyFirstEventCount)) {
+				load_events(iter, 0, count, AppKeyStartFirstEvents);
+			}
+	}
+	//Save persistently...
+	persist_write_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
+	uint temp;
+	switch(m_data.events_enabled) {
+		case 3:
+			write_persist(PERSIST_THIRD_EVENT_DATA, 2, PERSIST_THIRD_EVENT_COUNT);
+		case 2:
+			write_persist(PERSIST_SECOND_EVENT_DATA, 1, PERSIST_SECOND_EVENT_COUNT);
+		case 1:
+			write_persist(PERSIST_FIRST_EVENT_DATA, 0, PERSIST_FIRST_EVENT_COUNT);
+	}
+	//update display
 	time_t currentTime;
 	struct tm* ticker;
 	time(&currentTime);
@@ -113,14 +298,48 @@ static int get_height(int i) {
 	}
 }
 
+static void destroy_text_layers() {
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text_layer_destroy(text_layers[i]);
+	}
+}
+
+static void create_text_layers() {
+	int layers_height = 0;
+	int padding;
+	Layer* window_layer = window_get_root_layer(s_main_window);
+	int window_height = layer_get_bounds(window_layer).size.h;
+	int window_width = layer_get_bounds(window_layer).size.w;
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		layers_height += get_height(i);
+	}
+	padding = (window_height - layers_height) / (m_data.layers_enabled + 1);
+	int ii = padding;
+	if (padding > MAX_PADDING_SIZE) {
+		layers_height += MAX_PADDING_SIZE * (m_data.layers_enabled - 1);
+		ii = (window_height - layers_height) / 2;
+		padding = MAX_PADDING_SIZE;
+	}
+	for (uint i = 0; i < m_data.layers_enabled; i++) {
+		text_layers[i] = text_layer_create(GRect(0, ii, window_width, get_height(i)));
+		text_layer_set_background_color(text_layers[i], GColorClear);
+		text_layer_set_text_color(text_layers[i], GColorWhite);
+		text_layer_set_text(text_layers[i], text[i]);
+		text_layer_set_text_alignment(text_layers[i], GTextAlignmentCenter);
+		text_layer_set_font(text_layers[i], get_font_from_size(get_font_size(i)));
+		layer_add_child(window_layer, text_layer_get_layer(text_layers[i]));
+		ii += get_height(i);
+		ii += padding;
+	}
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+	APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped. Reason: %d", (int)reason);
+}
+
 static void main_window_load(Window *window) {
 	window_set_background_color(window, GColorBlack);
 	current_unit = MINUTE;
-	Layer* window_layer = window_get_root_layer(window);
-	int window_height = layer_get_bounds(window_layer).size.h;
-	int window_width = layer_get_bounds(window_layer).size.w;
-	int layers_height = 0;
-	int padding;
 	if (persist_exists(PERSIST_MAIN_DATA)) {
 		persist_read_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
 	} else {
@@ -136,53 +355,65 @@ static void main_window_load(Window *window) {
 	text = malloc (m_data.layers_enabled * sizeof(char*));
 	text_layers = malloc (m_data.layers_enabled * sizeof(TextLayer*));
 	for (uint i = 0; i < m_data.layers_enabled; i++) {
-		layers_height += get_height(i);
-	}
-	padding = (window_height - layers_height) / (m_data.layers_enabled + 1);
-	int ii = padding;
-	if (padding > MAX_PADDING_SIZE) {
-		layers_height += MAX_PADDING_SIZE * (m_data.layers_enabled - 1);
-		ii = (window_height - layers_height) / 2;
-		padding = MAX_PADDING_SIZE;
-	}
-	for (uint i = 0; i < m_data.layers_enabled; i++) {
 		text[i] = malloc(MAX_TEXT_LENGTH * sizeof(char));
 		text[i][0] = '\0';
-		text_layers[i] = text_layer_create(GRect(0, ii, window_width, get_height(i)));
-		text_layer_set_background_color(text_layers[i], GColorClear);
-		text_layer_set_text_color(text_layers[i], GColorWhite);
-		text_layer_set_text(text_layers[i], text[i]);
-		text_layer_set_text_alignment(text_layers[i], GTextAlignmentCenter);
-		text_layer_set_font(text_layers[i], get_font_from_size(get_font_size(i)));
-		layer_add_child(window_layer, text_layer_get_layer(text_layers[i]));
-		ii += get_height(i);
-		ii += padding;
 	}
-	events = malloc(3 * sizeof(Events*));
-	if (persist_exists(PERSIST_EVENT_DATA)) {
-		persist_read_data(PERSIST_EVENT_DATA, &events, sizeof(Events**));
-	} else {
-		for (uint i = 0; i < m_data.events_enabled; i++) {
-			events[i] = events_create(0);
-		}
+	create_text_layers();
+	events = malloc(m_data.events_enabled * sizeof(Events*));
+	switch(m_data.events_enabled) {
+		case 3:
+			if (persist_exists(PERSIST_THIRD_EVENT_COUNT)) {
+				events[2] = events_create(persist_read_int(PERSIST_THIRD_EVENT_COUNT));
+				read_persist(PERSIST_THIRD_EVENT_DATA, 2);
+			} else {
+				events[2] = events_create(0);
+			}
+		case 2:
+			if (persist_exists(PERSIST_SECOND_EVENT_COUNT)) {
+				events[1] = events_create(persist_read_int(PERSIST_SECOND_EVENT_COUNT));
+				read_persist(PERSIST_SECOND_EVENT_DATA, 1);
+			} else {
+				events[1] = events_create(0);
+			}
+		case 1:
+			if (persist_exists(PERSIST_FIRST_EVENT_COUNT)) {
+				events[0] = events_create(persist_read_int(PERSIST_FIRST_EVENT_COUNT));
+				read_persist(PERSIST_FIRST_EVENT_DATA, 0);
+			} else {
+				events[0] = events_create(0);
+			}
 	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-	app_message_open(INBOX_SIZE, OUTBOX_SIZE);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	app_message_register_inbox_received(inbox_received_callback);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+	app_message_register_inbox_dropped(inbox_dropped_callback);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", app_message_open(INBOX_SIZE, OUTBOX_SIZE));
 }
 
 static void main_window_unload(Window *window) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	tick_timer_service_unsubscribe();
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+	destroy_text_layers();
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	for (uint i = 0; i < m_data.layers_enabled; i++) {
-		text_layer_destroy(text_layers[i]);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		free(text[i]);
 	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(text_layers);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(text);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	for (uint i = 0; i < m_data.events_enabled; i++) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		events_destroy(events[i]);
 	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events);
 }
 

@@ -14,8 +14,11 @@ int32_t event_getTimeLeft(event_Event* event, struct tm* tick_time) {
 }
 
 void event_destroy(event_Event* event) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(event->title);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(event);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 }
 
 Events* events_create(uint8_t size) {
@@ -28,9 +31,12 @@ Events* events_create(uint8_t size) {
 
 void events_destroy(Events* events) {
 	for (int i = 0; i < events->size; i++) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		event_destroy(events->events[i]);
 	}
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events->events);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events);
 }
 enum tot {
@@ -67,7 +73,8 @@ static uint getUint(struct main_data* data, uint event, enum tot param3) {
 	}
 }
 
-char** events_getCurrent(Events** events, struct main_data* data, struct tm* tick_time, char** out, Unit units) {
+bool events_getCurrent(Events** events, struct main_data* data, struct tm* tick_time, char** out, Unit units) {
+	bool tempb = false;
 	if (data->date_layer != NULL_NUMBER) {
 		strftime(out[data->date_layer], MAX_TEXT_LENGTH * sizeof(char), "%a, %b %d", tick_time);
 	}
@@ -103,6 +110,12 @@ char** events_getCurrent(Events** events, struct main_data* data, struct tm* tic
 			seconds -= hours * SECONDS_PER_HOUR;
 			minutes = seconds / SECONDS_PER_MINUTE;
 			seconds -= minutes * SECONDS_PER_MINUTE;
+			if (units == MINUTE && seconds > 0) {
+				minutes++;
+			}
+			if (minutes <= 5) {
+				tempb = true;
+			}
 			uint temp = getUint(data, i, TITLE);
 			if (temp != NULL_NUMBER) {
 				strncpy(out[temp], current->title, MAX_TEXT_LENGTH * sizeof(char));
@@ -122,5 +135,5 @@ char** events_getCurrent(Events** events, struct main_data* data, struct tm* tic
 			}
 		}
 	}
-	return out;
+	return tempb;
 }

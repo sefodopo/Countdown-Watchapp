@@ -58,5 +58,5 @@ Events* events_create(uint8_t size);
 
 void events_destroy(Events* events);
 
-char** events_getCurrent(Events** events, struct main_data* data, struct tm* tick_time, char** out, Unit units);
+bool events_getCurrent(Events** events, struct main_data* data, struct tm* tick_time, char** out, Unit units);
 
