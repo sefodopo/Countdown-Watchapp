@@ -1,44 +1,46 @@
 {
-  "name": "Countdown",
-  "author": "Sefodopo",
-  "version": "1.0.0",
-  "keywords": ["pebble-app"],
-  "private": true,
-  "dependencies": {},
-  "pebble": {
-    "displayName": "Countdown",
-    "uuid": "cedd426f-f98b-4bce-94e1-4a4f38668378",
-    "sdkVersion": "3",
-    "enableMultiJS": true,
-    "targetPlatforms": [
-      "aplite",
-      "basalt"
+    "author": "Sefodopo",
+    "dependencies": {},
+    "keywords": [
+        "pebble-app"
     ],
-    "watchapp": {
-      "watchface": true
+    "name": "countdown",
+    "pebble": {
+        "capabilities": [
+            ""
+        ],
+        "displayName": "Countdown",
+        "enableMultiJS": true,
+        "messageKeys": [],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "fonts/LiberationSans-Regular.ttf",
+                    "name": "SANS_20",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/LiberationSans-Regular.ttf",
+                    "name": "SANS_15",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/LiberationSans-Bold.ttf",
+                    "name": "SANS_30",
+                    "type": "font"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt"
+        ],
+        "uuid": "cedd426f-f98b-4bce-94e1-4a4f38668378",
+        "watchapp": {
+            "watchface": true
+        }
     },
-    "messageKeys": [
-		"Data",
-		"Events"
-    ],
-    "resources": {
-      "media": [
-		{
-			"type": "font",
-			"name": "SANS_15",
-			"file": "LiberationSans-Regular.ttf"
-		},
-		{
-			"type": "font",
-			"name": "SANS_20",
-			"file": "LiberationSans-Regular.ttf"
-		},
-		{
-			"type": "font",
-			"name": "SANS_30",
-			"file": "LiberationSans-Bold.ttf"
-		}
-      ]
-    }
-  }
+    "version": "1.0.0"
 }

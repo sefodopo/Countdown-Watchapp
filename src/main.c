@@ -15,8 +15,8 @@
 #define PERSIST_SECOND_EVENT_DATA 140
 #define PERSIST_THIRD_EVENT_DATA 160
 
-#define INBOX_SIZE 100
-#define OUTBOX_SIZE 256
+#define INBOX_SIZE 1024
+#define OUTBOX_SIZE 10
 
 #define AppKeyLayersEnabled 0
 #define AppKeyDateLayer 1
@@ -121,21 +121,19 @@ static void check_all_changed_font_size(DictionaryIterator *iter, int temp) {
 static void load_events(DictionaryIterator *iter, int int1, uint count, int appKey) {
 	events_destroy(events[int1]);
 	events[int1] = events_create(count);
-	char *title = NULL;
-	time_t seconds = 0;
 	int temp = 0;
 	for (uint i = 0; i < count; i++) {
 		Tuple *tuple = dict_find(iter, appKey + temp);
 		if (tuple) {
-			title = tuple->value->cstring;
+			char *string = tuple->value->cstring;
+			strncpy(events[int1]->events[i]->title, string, MAX_TEXT_LENGTH * sizeof(char));
 		}
 		temp++;
 		tuple = dict_find(iter, appKey + temp);
 		if (tuple) {
-			seconds = tuple->value->uint32;
+			events[int1]->events[i]->seconds = tuple->value->uint32;
 		}
 		temp++;
-		events[int1]->events[i] = event_create(title, seconds);
 	}
 }
 
@@ -155,10 +153,9 @@ static void write_persist(uint key, uint int1, uint countKey) {
 static void read_persist(uint key, uint int1) {
 	uint temp = 0;
 	for (uint i = 0; i < events[int1]->size; i++) {
-		char string[MAX_TEXT_LENGTH];
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, string, sizeof(string)));
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, events[int1]->events[i]->title, MAX_TEXT_LENGTH * sizeof(char)));
 		temp++;
-		events[int1]->events[i] = event_create(string, persist_read_int(key + temp));
+		events[int1]->events[i]->seconds = persist_read_int(key + temp);
 		temp++;
 	}
 }
@@ -234,7 +231,6 @@ static void inbox_received_callback(DictionaryIterator *iter, void *context) {
 	}
 	//Save persistently...
 	persist_write_data(PERSIST_MAIN_DATA, &m_data, sizeof(struct main_data));
-	uint temp;
 	switch(m_data.events_enabled) {
 		case 3:
 			write_persist(PERSIST_THIRD_EVENT_DATA, 2, PERSIST_THIRD_EVENT_COUNT);
@@ -248,7 +244,7 @@ static void inbox_received_callback(DictionaryIterator *iter, void *context) {
 	struct tm* ticker;
 	time(&currentTime);
 	ticker = localtime(&currentTime);
-	tick_handler(ticker, MINUTE);
+	tick_handler(ticker, MINUTE_UNIT);
 }
 
 GFont get_font_from_size(enum FontSize size) {
@@ -383,37 +379,24 @@ static void main_window_load(Window *window) {
 				events[0] = events_create(0);
 			}
 	}
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	app_message_register_inbox_received(inbox_received_callback);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	app_message_register_inbox_dropped(inbox_dropped_callback);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", app_message_open(INBOX_SIZE, OUTBOX_SIZE));
 }
 
 static void main_window_unload(Window *window) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	tick_timer_service_unsubscribe();
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	destroy_text_layers();
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	for (uint i = 0; i < m_data.layers_enabled; i++) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		free(text[i]);
 	}
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(text_layers);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(text);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	for (uint i = 0; i < m_data.events_enabled; i++) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		events_destroy(events[i]);
 	}
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events);
 }
 

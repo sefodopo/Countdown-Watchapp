@@ -1,42 +1,32 @@
 #include <pebble.h>
 #include "event.h"
 
-event_Event* event_create(const char* title, time_t seconds) {
-	event_Event* event = (event_Event*)malloc(sizeof(event_Event));
-	event->title = (char*)malloc(strlen(title) * sizeof(char));
-	strcpy(event->title, title);
-	event->seconds = seconds;
-	return event;
-}
-
 int32_t event_getTimeLeft(event_Event* event, struct tm* tick_time) {
 	return event->seconds - mktime(tick_time);
 }
 
 void event_destroy(event_Event* event) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(event->title);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(event);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 }
 
 Events* events_create(uint8_t size) {
-	Events* events = (Events*)malloc(sizeof(Events));
+	Events* events = malloc(sizeof(Events));
 	events->size = size;
 	events->index = 0;
-	events->events = (event_Event**)malloc(size * sizeof(event_Event*));
+	events->events = malloc(size * sizeof(event_Event*));
+	for (uint8_t i = 0; i < size; i++) {
+		events->events[i] = malloc(sizeof(event_Event));
+		events->events[i]->title = malloc(MAX_TEXT_LENGTH * sizeof(char));
+	}
 	return events;
 }
 
 void events_destroy(Events* events) {
-	for (int i = 0; i < events->size; i++) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
+	for (uint8_t i = 0; i < events->size; i++) {
 		event_destroy(events->events[i]);
 	}
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events->events);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 	free(events);
 }
 enum tot {
@@ -135,5 +125,10 @@ bool events_getCurrent(Events** events, struct main_data* data, struct tm* tick_
 			}
 		}
 	}
-	return tempb;
+	if (tempb && units == MINUTE)
+		return true;
+	else if (!tempb && units == SECOND)
+		return true;
+	else
+		return false;
 }
