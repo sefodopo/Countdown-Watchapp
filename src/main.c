@@ -49,18 +49,13 @@ static struct main_data m_data;
 
 void tick_handler(struct tm* tick_time, TimeUnits units_changed) {
 	if (events_getCurrent(events, &m_data, tick_time, text, current_unit)) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 		switch (current_unit) {
 			case MINUTE:
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 				current_unit = SECOND;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 				tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
 				break;
 			case SECOND:
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 				current_unit = MINUTE;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "temp");
 				tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 				break;
 		}
@@ -153,7 +148,7 @@ static void write_persist(uint key, uint int1, uint countKey) {
 static void read_persist(uint key, uint int1) {
 	uint temp = 0;
 	for (uint i = 0; i < events[int1]->size; i++) {
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, events[int1]->events[i]->title, MAX_TEXT_LENGTH * sizeof(char)));
+		//APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, events[int1]->events[i]->title, MAX_TEXT_LENGTH * sizeof(char)));
 		temp++;
 		events[int1]->events[i]->seconds = persist_read_int(key + temp);
 		temp++;
@@ -240,10 +235,8 @@ static void inbox_received_callback(DictionaryIterator *iter, void *context) {
 			write_persist(PERSIST_FIRST_EVENT_DATA, 0, PERSIST_FIRST_EVENT_COUNT);
 	}
 	//update display
-	time_t currentTime;
-	struct tm* ticker;
-	time(&currentTime);
-	ticker = localtime(&currentTime);
+	time_t currentTime = time(NULL);
+	struct tm* ticker = localtime(&currentTime);
 	tick_handler(ticker, MINUTE_UNIT);
 }
 
@@ -381,9 +374,11 @@ static void main_window_load(Window *window) {
 	}
 	// Subscribe to alerts about the minute changing
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+	time_t now = time(NULL);
+	struct tm* ticker = localtime(&now);
+	tick_handler(ticker, MINUTE_UNIT);
 	app_message_register_inbox_received(inbox_received_callback);
 	app_message_register_inbox_dropped(inbox_dropped_callback);
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", app_message_open(INBOX_SIZE, OUTBOX_SIZE));
 }
 
 static void main_window_unload(Window *window) {
