@@ -2,9 +2,12 @@
 build/
 dist/
 dist.zip
+.idea
+CMakeLists.txt
 
 # Ignore waf lock file
 .lock-waf*
 
 # Ignore installed node modules
 node_modules/
+cmake-build-debug
