@@ -148,7 +148,7 @@ static void write_persist(uint key, uint int1, uint countKey) {
 static void read_persist(uint key, uint int1) {
 	uint temp = 0;
 	for (uint i = 0; i < events[int1]->size; i++) {
-		//APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", persist_read_string(key + temp, events[int1]->events[i]->title, MAX_TEXT_LENGTH * sizeof(char)));
+        persist_read_string(key + temp, events[int1]->events[i]->title, MAX_TEXT_LENGTH * sizeof(char));
 		temp++;
 		events[int1]->events[i]->seconds = persist_read_int(key + temp);
 		temp++;
@@ -379,6 +379,7 @@ static void main_window_load(Window *window) {
 	tick_handler(ticker, MINUTE_UNIT);
 	app_message_register_inbox_received(inbox_received_callback);
 	app_message_register_inbox_dropped(inbox_dropped_callback);
+    app_message_open(INBOX_SIZE, OUTBOX_SIZE);
 }
 
 static void main_window_unload(Window *window) {
